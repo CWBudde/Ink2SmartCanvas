@@ -1,6 +1,6 @@
 # Ink2SmartCanvas
 
-Ink2SmartCanvas is an Inkscape extension written in Python that exports SVG to HTML5 Canvas in a flavor that Smart Mobile Studio can handle the data. The extension is based on based on Ink2cavas. It aims on providing a way to ease the creation of Canvas graphics by avoiding writing code by hand through Inkscape drawing interface.
+Ink2SmartCanvas is an Inkscape extension written in Python that exports SVG to HTML5 Canvas in a flavor that Smart Mobile Studio can handle the data. The extension is based on based on [Ink2canvas](https://github.com/hacktoon/ink2canvas). It aims on providing a way to ease the creation of Canvas graphics by avoiding writing code by hand through Inkscape drawing interface.
 
 ## Project files
 * **Ink2SmartCanvas** - This folder holds the project main files:
