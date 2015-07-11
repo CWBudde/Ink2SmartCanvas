@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <_name>Convert to Smart Mobile Studio canvas</_name>
+  <id>org.inkscape.output.html5smart</id>
+  <dependency type="executable" location="extensions">Ink2SmartCanvas/main.py</dependency>
+  <dependency type="executable" location="extensions">Ink2SmartCanvas/lib/inkex.py</dependency>
+  <param name="precision" type="int" min="0" max="25" _gui-text="Precision:">2</param>
+	<output>
+    <extension>.pas</extension>
+    <mimetype>text/pas</mimetype>
+    <_filetypename>Smart HTML5 (*.pas)</_filetypename>
+    <_filetypetooltip>Smart HTML5 Canvas</_filetypetooltip>
+  </output>
+  <script>
+    <command reldir="extensions" interpreter="python">Ink2SmartCanvas/main.py</command>
+  </script>
+</inkscape-extension>
