@@ -81,7 +81,7 @@ class Canvas:
         if a < 1:
             return "'rgba(%d, %d, %d, %s)'" % (r, g, b, self.f2rs(a))
         else:
-            return "'#%x%x%x'" % (r, g, b)
+            return "'#%02x%02x%02x'" % (r, g, b)
 
     def setOpacity(self, value):
         data = self.f2rs(float(value))
@@ -162,8 +162,12 @@ class Canvas:
             self.write("Context.rect(%s, %s, %s, %s);" % data)
 
     def arc(self, x, y, r, a1, a2, flag):
-        data = (self.f2rs(x), self.f2rs(y), self.f2rs(r), self.f2rs(a1), self.f2rs(a2), flag)
-        self.write("Context.arc(%s, %s, %s, %s, %s, %d);" % data)
+        if flag:
+          dflag = "True"
+        else:
+          dflag = "False"  
+        data = (self.f2rs(x), self.f2rs(y), self.f2rs(r), self.f2rs(a1), self.f2rs(a2), dflag)
+        self.write("Context.arc(%s, %s, %s, %s, %s, %s);" % data)
 
     def fillText(self, text, x, y):
         data = (text, self.f2rs(x), self.f2rs(y))
