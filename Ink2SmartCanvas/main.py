@@ -19,8 +19,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 '''
 
 import sys
-sys.path.append('/usr/share/inkscape/extensions')
-import inkex
+from lib import inkex
 from canvas import Canvas
 from Ink2SmartCanvasCore import Ink2SmartCanvasCore
  

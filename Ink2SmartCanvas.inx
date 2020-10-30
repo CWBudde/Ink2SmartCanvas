@@ -8,7 +8,7 @@
 	<output>
     <extension>.pas</extension>
     <mimetype>text/pas</mimetype>
-    <_filetypename>Smart HTML5 (*.pas)</_filetypename>
+    <_filetypename>Smart HTML5 unit (*.pas)</_filetypename>
     <_filetypetooltip>Smart HTML5 Canvas</_filetypetooltip>
   </output>
   <script>
