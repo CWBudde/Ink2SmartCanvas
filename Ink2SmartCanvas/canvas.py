@@ -1,121 +1,111 @@
-#!/usr/bin/env python
-# -*- encoding: utf-8 -*-
-'''
-Copyright (C) 2012 Karlisson Bezerra, contact@hacktoon.com
+# coding=utf-8
+#
+# Copyright (C) 2011 Karlisson Bezerra <contact@hacktoon.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+"""
+Canvas module for ink2canvas extension
+"""
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+from inkex import Color
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-'''
-
-from lib import inkex
-from lib import simplestyle
-
-class Canvas:
+class Canvas(object):
     """Canvas API helper class"""
 
-    def __init__(self, width, height, precision = 2, context = "Context"):
-        self.precision = precision
-        self.prec = "%." + str(precision) + "f"
+    def __init__(self, parent, width, height, precision, context="Context"):
         self.obj = context
-        self.code = []  #stores the code
+        self.code = []  # stores the code
         self.style = {}
-        self.styleCache = {}  #stores the previous style applied
+        self.styleCache = {}  # stores the previous style applied
+        self.parent = parent
         self.width = width
         self.height = height
-        if not hasattr(self, 'unittouu'): 
-            self.unittouu = inkex.unittouu
+        self.precision = precision
 
     def write(self, text):
-        self.code.append("  " + text.replace("Context", self.obj) + "\n")
+        self.code.append("\t" + text.replace("Context", self.obj) + "\n")
 
     def output(self):
         from textwrap import dedent
         pas = """  var Canvas := JHTMLCanvasElement(Document.createElement('canvas'));
-  Canvas.width := %d;
-  Canvas.height := %d;
-  var Context := JCanvasRenderingContext2D(Canvas.getContext('2d'));
-  %s
-"""
-        return pas % (self.width, self.height, "".join(self.code))
+          Canvas.width := %d;
+          Canvas.height := %d;
+          var Context := JCanvasRenderingContext2D(Canvas.getContext('2d'));
+          %s
+        """
+        return dedent(pas) % (self.width, self.height, "".join(self.code))
 
-    def putStyleInCache(self, style):
-        #Checks if the last style used is the same or there's no style yet
-        for x in style.values():
-            if x != "":
-                self.styleCache.update(style)
-    
-    def f2rs(self, value):
-        #Round supplied value and convert to string
-        rounded = round(value, self.precision) 
-        return self.prec % rounded       
+    def equalStyle(self, style, key):
+        """Checks if the last style used is the same or there's no style yet"""
+        if key in self.styleCache:
+            return True
+        if key not in style:
+            return True
+        return style[key] == self.styleCache[key]
 
     def beginPath(self):
         self.write("Context.beginPath;")
 
     def createLinearGradient(self, href, x1, y1, x2, y2):
-        data = (href, self.f2rs(x1), self.f2rs(y1), self.f2rs(x2), self.f2rs(y2))
-        self.write("var %s := Context.createLinearGradient(%s, %s, %s, %s);" % data)
+        data = (href, x1, y1, x2, y2)
+        self.write("var %s := Context.createLinearGradient(%f, %f, %f, %f);" % data)
 
     def createRadialGradient(self, href, cx1, cy1, rx, cx2, cy2, ry):
-        data = (href, self.f2rs(cx1), self.f2rs(cy1), self.f2rs(rx), f2rs(cx2), self.f2rs(cy2), self.f2rs(ry))
-        self.write("var %s := Context.createRadialGradient(%s, %s, %s, %s, %s, %s);" % data)
+        data = (href, cx1, cy1, rx, cx2, cy2, ry)
+        self.write("var %s = Context.createRadialGradient(%f, %f, %f, %f, %f, %f);" % data)
 
     def addColorStop(self, href, pos, color):
-        data = (href, self.f2rs(pos), color) 
-        self.write("%s.addColorStop(%s, %s);" % data)
+        self.write("%s.addColorStop(%f, %s);" % (href, pos, color))
 
-    def getColor(self, rgb, a):
-        r, g, b = simplestyle.parseColor(rgb)
-        a = float(a)
-        if a < 1:
-            return "'rgba(%d, %d, %d, %s)'" % (r, g, b, self.f2rs(a))
-        else:
-            return "'#%02x%02x%02x'" % (r, g, b)
+    def getColor(self, rgb, alpha):
+        return "'{}'".format(str(Color(rgb).to_rgba(alpha)))
+
+    def setGradient(self, href):
+        """
+        for stop in gstops:
+            style = simplestyle.parseStyle(stop.get("style"))
+            stop_color = style["stop-color"]
+            opacity = style["stop-opacity"]
+            color = self.getColor(stop_color, opacity)
+            pos = float(stop.get("offset"))
+            self.addColorStop(href, pos, color)
+        """
+        return None  # href
 
     def setOpacity(self, value):
-        data = self.f2rs(float(value))
-        self.write("Context.globalAlpha := %s;" % data)
+        self.write("Context.globalAlpha := %.1f;" % float(value))
 
     def setFill(self, value):
         try:
             alpha = self.style["fill-opacity"]
         except:
             alpha = 1
-        if not value.startswith("url(") and not value.startswith("gradient="):
+        if not value.startswith("url("):
             fill = self.getColor(value, alpha)
-            self.write("Context.fillStyle := %s;" % fill)
-        else:
-            if value.startswith("gradient="):
-                value = value.replace("gradient=", "")
-                self.write("Context.fillStyle := %s;" % value)
+            self.write("Context.fillStyle = %s;" % fill)
 
     def setStroke(self, value):
         try:
             alpha = self.style["stroke-opacity"]
         except:
             alpha = 1
-        if not value.startswith("url(") and not value.startswith("gradient="):
-            stroke = self.getColor(value, alpha)
-            self.write("Context.strokeStyle := %s;" % stroke)
-        else:
-            if value.startswith("gradient="):
-                value = value.replace("gradient=", "")
-                self.write("Context.strokeStyle := %s;" % value)
+        self.write("Context.strokeStyle := %s;" % self.getColor(value, alpha))
 
-    def setStrokeWidth(self, value):        
-        data = self.f2rs(self.unittouu(value))
-        self.write("Context.lineWidth := %s;" % data)
+    def setStrokeWidth(self, value):
+        self.write("Context.lineWidth := %f;" % self.parent.svg.unittouu(value))
 
     def setStrokeLinecap(self, value):
         self.write("Context.lineCap := '%s';" % value)
@@ -130,74 +120,53 @@ class Canvas:
         self.write("Context.font := \"%s\";" % value)
 
     def moveTo(self, x, y):
-        data = (self.f2rs(x), self.f2rs(y))
-        self.write("Context.moveTo(%s, %s);" % data)
+        self.write("Context.moveTo(%f, %f);" % (round(x, self.precision), round(y, self.precision)))
 
     def lineTo(self, x, y):
-        data = (self.f2rs(x), self.f2rs(y))
-        self.write("Context.lineTo(%s, %s);" % data)
+        self.write("Context.lineTo(%f, %f);" % (round(x, self.precision), round(y, self.precision)))
 
     def quadraticCurveTo(self, cpx, cpy, x, y):
-        data = (self.f2rs(cpx), self.f2rs(cpy), self.f2rs(x), self.f2rs(y))
-        self.write("Context.quadraticCurveTo(%s, %s, %s, %s);" % data)
+        data = (round(cpx, self.precision), round(cpy, self.precision), round(x, self.precision), round(y, self.precision))
+        self.write("Context.quadraticCurveTo(%f, %f, %f, %f);" % data)
 
     def bezierCurveTo(self, x1, y1, x2, y2, x, y):
-        data = (self.f2rs(x1), self.f2rs(y1), self.f2rs(x2), self.f2rs(y2), self.f2rs(x), self.f2rs(y))
-        self.write("Context.bezierCurveTo(%s, %s, %s, %s, %s, %s);" % data)
+        data = (round(x1, self.precision), round(y1, self.precision), round(x2, self.precision), round(y2, self.precision), round(x, self.precision), round(y, self.precision))
+        self.write("Context.bezierCurveTo(%f, %f, %f, %f, %f, %f);" % data)
 
-    def rect(self, x, y, w, h, rx = 0, ry = 0):
+    def rect(self, x, y, w, h, rx=0, ry=0):
         if rx or ry:
-            #rounded rectangle, starts top-left counterclockwise
+            # rounded rectangle, starts top-left anticlockwise
             self.moveTo(x, y + ry)
             self.lineTo(x, y + h - ry)
-            self.quadraticCurveTo(x, y+h, x+rx, y+h)
-            self.lineTo(x+w-rx, y+h)
-            self.quadraticCurveTo(x+w, y+h, x+w, y+h-ry)
-            self.lineTo(x+w, y+ry)
-            self.quadraticCurveTo(x+w, y, x+w-rx, y)
-            self.lineTo(x+rx, y)
-            self.quadraticCurveTo(x, y, x, y+ry)
+            self.quadraticCurveTo(x, y + h, x + rx, y + h)
+            self.lineTo(x + w - rx, y + h)
+            self.quadraticCurveTo(x + w, y + h, x + w, y + h - ry)
+            self.lineTo(x + w, y + ry)
+            self.quadraticCurveTo(x + w, y, x + w - rx, y)
+            self.lineTo(x + rx, y)
+            self.quadraticCurveTo(x, y, x, y + ry)
         else:
-            data = (self.f2rs(x), self.f2rs(y), self.f2rs(w), self.f2rs(h)) 
-            self.write("Context.rect(%s, %s, %s, %s);" % data)
+            self.write("Context.rect(%f, %f, %f, %f);" % (x, y, w, h))
 
     def arc(self, x, y, r, a1, a2, flag):
-        if flag:
-          dflag = "True"
-        else:
-          dflag = "False"  
-        data = (self.f2rs(x), self.f2rs(y), self.f2rs(r), self.f2rs(a1), self.f2rs(a2), dflag)
-        self.write("Context.arc(%s, %s, %s, %s, %s, %s);" % data)
+        data = (x, y, r, a1, a2, flag)
+        self.write("Context.arc(%f, %f, %f, %f, %.8f, %d);" % data)
 
     def fillText(self, text, x, y):
-        data = (text, self.f2rs(x), self.f2rs(y))
-        self.write("Context.fillText(\"%s\", %s, %s);" % data)
+        self.write("Context.fillText(\"%s\", %f, %f);" % (text, x, y))
 
     def translate(self, cx, cy):
-        if (cx != 0.0) and (cy != 0.0): 
-            data = (self.f2rs(cx), self.f2rs(cy))
-            self.write("Context.translate(%s, %s);" % data)
+        self.write("Context.translate(%f, %f);" % (cx, cy))
 
     def rotate(self, angle):
-        if (angle != 0.0): 
-            data = self.f2rs(angle)
-            self.write("Context.rotate(%s);" % data)
+        self.write("Context.rotate(%f);" % angle)
 
     def scale(self, rx, ry):
-        if (rx != 1.0) and (ry != 1.0): 
-            data = (self.f2rs(rx), self.f2rs(ry))
-            self.write("Context.scale(%s, %s);" % data)
+        self.write("Context.scale(%f, %f);" % (rx, ry))
 
     def transform(self, m11, m12, m21, m22, dx, dy):
-        if (m11 == 1.0) and (m12 == 0.0) and (m21 == 0.0) and (m22 == 1.0):
-            data = (self.f2rs(dx), self.f2rs(dy)) 
-            self.write("Context.translate(%s, %s);" % data)
-        elif (dx == 0.0) and (m12 == 0.0) and (m21 == 0.0) and (dy == 0.0):
-            data = (self.f2rs(m11), self.f2rs(m22)) 
-            self.write("Context.scale(%s, %s);" % data)
-        else:    
-            data = (self.f2rs(m11), self.f2rs(m12), self.f2rs(m21), self.f2rs(m22), self.f2rs(dx), self.f2rs(dy))
-            self.write("Context.transform(%s, %s, %s, %s, %s, %s);" % data)
+        data = (m11, m12, m21, m22, dx, dy)
+        self.write("Context.transform(%f, %f, %f, %f, %f, %f);" % data)
 
     def save(self):
         self.write("Context.save;")
@@ -205,16 +174,8 @@ class Canvas:
     def restore(self):
         self.write("Context.restore;")
 
-    def fill(self):
+    def closePath(self):
         if "fill" in self.style and self.style["fill"] != "none":
             self.write("Context.fill;")
-        
-    def stroke(self):
         if "stroke" in self.style and self.style["stroke"] != "none":
             self.write("Context.stroke;")
-        
-    def closePath(self, is_closed=False):
-        if is_closed:
-            self.write("Context.closePath;")
-    def clip(self):
-        self.write("Context.clip;")
